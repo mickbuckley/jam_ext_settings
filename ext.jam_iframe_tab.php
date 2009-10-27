@@ -67,7 +67,7 @@ class Jam_iframe_tab {
 		}
 
 		if ($pages != FALSE && $valid_weblog != FALSE) {
-			// nothing to show or not valid on this page
+			// something to show and valid on this page
 			$publish_tabs['jam_iframe_tab'] = $LANG->line('Jam_iframe_tab');
 		}
 
@@ -192,12 +192,6 @@ class Jam_iframe_tab {
 		return $default_settings;
 	}
 
-	/**
-	* Activates the extension
-	*
-	* @return	bool Always TRUE
-	* @since	Version 2.0.0
-	*/
 	function activate_extension()
 	{
 		global $DB;
@@ -245,11 +239,6 @@ class Jam_iframe_tab {
 			WHERE class = 'Example_extension'");
 	}
 
-	/**
-	* Disables the extension the extension and deletes settings from DB
-	* 
-	* @since	Version 2.0.0
-	*/
 	function disable_extension()
 	{
 		global $DB;

@@ -23,6 +23,7 @@ class Jam_ext_settings {
         var $version = JAM_EXT_SETTINGS_VERSION;
         var $description = 'Offers an API and storage for extension settings.  Works with Multiple Site Manager.';
         var $settings_exist = 'y';
+	var $docs_url = 'http://jamdigital.co.nz/';
 
 	function Jam_ext_settings($extension_name = NULL, $settings = NULL)
 	{
