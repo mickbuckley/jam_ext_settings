@@ -51,7 +51,7 @@ class Jam_ext_settings {
 
 	function get_settings($extension_name, $site_id, $force_refresh = FALSE)
 	{
-		global $DB, $REGX;
+		global $DB, $REGX, $SESS;
 		$settings = NULL;
                 if(isset($SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['settings']) === FALSE
 			 OR $force_refresh === TRUE)
@@ -67,18 +67,18 @@ class Jam_ext_settings {
                         if ($query->num_rows > 0 && $query->row['settings'] != '')
                         {
                                 // save them to the cache
-                                $SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['setttings'] = $REGX->array_stripslashes(unserialize($query->row['settings']));
+                                $SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['settings'] = $REGX->array_stripslashes(unserialize($query->row['settings']));
                         }
-
-			if (empty($SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['setttings']) !== TRUE)
-			{
-				$settings = $SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['setttings'];
-			}
-			else
-			{
-				$settings = $this->_default_settings($extension_name, $site_id);
-			}
                 }
+
+		if (empty($SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['settings']) !== TRUE)
+		{
+			$settings = $SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['settings'];
+		}
+		else
+		{
+			$settings = $this->_default_settings($extension_name);
+		}
 		return $settings;
 	}
 
@@ -93,18 +93,18 @@ class Jam_ext_settings {
                 return $default_settings;
 	}
 
-	function _default_settings($extension_name, $site_id)
+	function _default_settings($extension_name)
 	{
 		//
 		// Internal method used to read default settings for a given
-		// extension and site from
+		// extension from
 		// the cache or from the exp_extensions table (i.e. the default settings)
 		//
 		global $DB, $REGX;
 		$result = array();
-		if (empty($SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['default']) !== TRUE)
+		if (empty($SESS->cache['Jam_ext_settings'][$extension_name]['default']) !== TRUE)
 		{
-			$result = $SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['default'];
+			$result = $SESS->cache['Jam_ext_settings'][$extension_name]['default'];
 		}
 		else
 		{
@@ -118,7 +118,7 @@ class Jam_ext_settings {
 			if ($query->num_rows > 0 && $query->row['settings'] != '')
                         {
                                 $result = $REGX->array_stripslashes(unserialize($query->row['settings']));
-				$SESS->cache['Jam_ext_settings'][$extension_name][$site_id]['default'] = $result;
+				$SESS->cache['Jam_ext_settings'][$extension_name]['default'] = $result;
 			}
 		}
 		return $result;
@@ -130,7 +130,7 @@ class Jam_ext_settings {
 		$extension_name = $REGX->xss_clean($_POST['name']);
 		$site_id = $PREFS->ini('site_id');
 
-		$default_settings = $this->_default_settings($extension_name, $site_id);
+		$default_settings = $this->_default_settings($extension_name);
 
 		//
 		// For multiselect options the $_POST object holds unwanted
@@ -182,6 +182,43 @@ class Jam_ext_settings {
 		}
                 $query = $DB->query($sql);
 
+	}
+
+	function merge_default_settings($extension_name)
+        {
+		global $DB, $REGX;
+		//
+		// Make sure that stored settings contain all the setting
+		// fields known in the default settings for this extension.
+		// Used to update stored settings when new settings are added to
+		// defualts, e.g. when upgrading an extension.
+		//
+		$default_settings = $this->_default_settings($extension_name);
+
+		$sql = "SELECT setting_id, settings "
+			. " FROM exp_jam_ext_settings "
+			. " WHERE extension_name = '" . $DB->escape_str($extension_name) . "'"
+			;
+		$query = $DB->query($sql);
+
+		$merged_settings = array();
+		if ($query->num_rows > 0) {
+			foreach ($query->result as $row) {
+				$settings = $REGX->array_stripslashes(unserialize($query->row['settings']));
+			}
+//echo "<p>setting merged_settings" . $row['setting_id'] . "</p>\n";
+			$merged_settings[$row['setting_id']] = array_merge($settings, $default_settings);
+		}
+
+		foreach ($merged_settings as $setting_id => $settings) {
+//echo "<p>updating merged_settings" . $setting_id . "</p>\n";
+			$sql = "UPDATE exp_jam_ext_settings "
+				. " SET settings = '" . addslashes(serialize($settings)) . "'"
+				. " WHERE setting_id = " . intval($setting_id)
+				;
+//echo $sql;
+			$DB->query($sql);
+		}
 	}
 
         function activate_extension()
